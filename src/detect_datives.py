@@ -88,9 +88,7 @@ def main(args):
 
         return args
 
-    global_idx = 0
-
-    def get_datives(texts, batch_size, processor):
+    def get_datives(texts, batch_size, processor, global_idx=0):
         dos, pps = [], []
         for doc in tqdm(processor.pipe(texts, disable=["ner"], batch_size=batch_size)):
             do = False
@@ -162,11 +160,12 @@ def main(args):
                                     break
             global_idx += 1
 
-        return dos, pps
+        return dos, pps, global_idx
 
     DOS, PPS = [], []
+    global_idx = 0
     for batch in get_batch(corpus, batch_size=batch_size):
-        dos, pps = get_datives(batch, batch_size, nlp)
+        dos, pps, global_idx = get_datives(batch, batch_size, nlp, global_idx)
         DOS.extend(dos)
         PPS.extend(pps)
 
@@ -174,12 +173,13 @@ def main(args):
     documented_pp_count = 0
 
     DOS_full = []
-    for sentence, lemma, verb, verb_pos, children in DOS:
+    for idx, sentence, lemma, verb, verb_pos, children in DOS:
         if lemma in dative_verbs:
             documented_do_count += 1
         args = collect_args(children)
         DOS_full.append(
             (
+                idx,
                 sentence,
                 lemma,
                 verb,
@@ -192,12 +192,13 @@ def main(args):
         )
 
     PPS_full = []
-    for sentence, lemma, verb, verb_pos, children in PPS:
+    for idx, sentence, lemma, verb, verb_pos, children in PPS:
         if lemma in dative_verbs:
             documented_pp_count += 1
         args = collect_args(children, "pp")
         PPS_full.append(
             (
+                idx,
                 sentence,
                 lemma,
                 verb,
@@ -217,6 +218,7 @@ def main(args):
         writer = csv.writer(f)
         writer.writerow(
             [
+                "sentence_idx",
                 "sentence",
                 "lemma",
                 "verb",
@@ -233,6 +235,7 @@ def main(args):
         writer = csv.writer(f)
         writer.writerow(
             [
+                "sentence_idx",
                 "sentence",
                 "lemma",
                 "verb",

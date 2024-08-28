@@ -1,0 +1,10 @@
+sentence_idx,sentence,lemma,verb,verb_pos,theme,recipient,theme_pos,recipient_pos
+8,she gave the ball to me.,give,gave,VBD,ball,me,NN,PRP
+9,she gave the ball to mom.,give,gave,VBD,ball,mom,NN,NN
+10,she sent the big book to grandma.,send,sent,VBD,book,grandma,NN,NN
+11,she is tossing the big ball to the dog.,toss,tossing,VBG,ball,dog,NN,NN
+12,she had given the ball to me.,give,given,VBN,ball,me,NN,PRP
+13,she gave it to me.,give,gave,VBD,it,me,PRP,PRP
+15,she had given it to mommy yesterday morning.,give,given,VBN,it,mommy,PRP,NN
+17,she did not give the ball to me.,give,give,VB,ball,me,NN,PRP
+18,maybe this should also be detected: she kicked the ball over to him.,kick,kicked,VBD,ball,him,NN,PRP

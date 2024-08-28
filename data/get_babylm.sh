@@ -1,8 +1,9 @@
 
 URL=https://github.com/babylm/babylm.github.io/raw/main/babylm_data.zip
-DIR=data/babylm
+DIR=data/corpora/babylm
 
 mkdir -p $DIR
+
 wget $URL -O $DIR/babylm_data.zip
 unzip $DIR/babylm_data.zip -d $DIR
 rm $DIR/babylm_data.zip
