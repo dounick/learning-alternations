@@ -22,7 +22,8 @@ def main(args):
     pathlib.Path(dative_path).mkdir(parents=True, exist_ok=True)
 
     # spacy setup
-    gpu = spacy.prefer_gpu()
+    # gpu = spacy.prefer_gpu()
+    # print(gpu)
     nlp = spacy.load("en_core_web_trf")
 
     # aochildes
