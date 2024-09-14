@@ -56,10 +56,6 @@ def main(args):
             else:
                 children.append(child.text.lower())
             children.extend(get_children_flatten(child, depth + 1, dep, return_tokens))
-        
-        # Join the tokens to form the full phrase
-        if return_tokens:
-            return [' '.join([child[0] for child in children])]
         return children
 
     def collect_args(children_obj, hyp="do"):
@@ -90,8 +86,18 @@ def main(args):
             args["theme_pos"] = hyp_args[0][-1]
 
         return args
-
-    def get_datives(texts, batch_size, processor, global_idx=0):
+    
+    def get_phrasal_children(child):
+        text = child.text.lower()
+        if child.children:
+            for grandchild in child.children:
+                if grandchild.i < child.i:
+                    text = get_phrasal_children(grandchild) + ' ' + text
+                else:
+                    text = text + ' ' + get_phrasal_children(grandchild)
+        return text
+    
+    def get_datives_phrasal(texts, batch_size, processor, global_idx=0):
         dos, pps = [], []
         for doc in tqdm(processor.pipe(texts, disable=["ner"], batch_size=batch_size)):
             do = False
@@ -120,6 +126,12 @@ def main(args):
                             ):
                                 if "to_dative" in tok_dep or "to_prep" in tok_dep:
                                     # also append global sentence id
+                                    children_phrasal = []
+                                    for verb_child in entity.children:
+                                        i, phrasal_verb_child = verb_child.i, get_phrasal_children(verb_child)
+                                        children_phrasal.append((i, phrasal_verb_child))
+                                    
+                                    children_phrasal = sorted([child[1] for child in children_phrasal], key=lambda x: x[0])
                                     pps.append(
                                         (
                                             global_idx,
@@ -127,7 +139,7 @@ def main(args):
                                             entity.lemma_,
                                             entity.text,
                                             entity.tag_,
-                                            children,
+                                            children_phrasal,
                                         )
                                     )
                                     break
@@ -146,10 +158,12 @@ def main(args):
                                     "for_dative" not in tokens_dep
                                     and "for_dobj" not in tokens_dep
                                 ):
-                                    do = True
-                                    # dos.append(sentence)
-                                    # print(children)
-                                    # args = collect_args(children)
+                                    children_phrasal = []
+                                    for verb_child in entity.children:
+                                        i, phrasal_verb_child = verb_child.i, get_phrasal_children(verb_child)
+                                        children_phrasal.append((i, phrasal_verb_child))
+                                    
+                                    children_phrasal = sorted([child[1] for child in children_phrasal], key=lambda x: x[0])
                                     dos.append(
                                         (
                                             global_idx,
@@ -157,7 +171,7 @@ def main(args):
                                             entity.lemma_,
                                             entity.text,
                                             entity.tag_,
-                                            children,
+                                            children_phrasal
                                         )
                                     )
                                     break
@@ -168,7 +182,7 @@ def main(args):
     DOS, PPS = [], []
     global_idx = 0
     for batch in get_batch(sentence, batch_size=1):
-        dos, pps, global_idx = get_datives(batch, 1, nlp, global_idx)
+        dos, pps, global_idx = get_datives_phrasal(batch, 1, nlp, global_idx)
         DOS.extend(dos)
         PPS.extend(pps)
 
@@ -176,10 +190,9 @@ def main(args):
     documented_pp_count = 0
 
     DOS_full = []
-    for idx, sentence, lemma, verb, verb_pos, children in DOS:
+    for idx, sentence, lemma, verb, verb_pos, children_phrasal in DOS:
         if lemma in dative_verbs:
             documented_do_count += 1
-        args = collect_args(children)
         DOS_full.append(
             (
                 idx,
@@ -187,18 +200,16 @@ def main(args):
                 lemma,
                 verb,
                 verb_pos,
-                args["theme"],
-                args["recipient"],
-                args["theme_pos"],
-                args["recipient_pos"],
+                children_phrasal[0],
+                children_phrasal[1],
+                children_phrasal[2]
             )
         )
 
     PPS_full = []
-    for idx, sentence, lemma, verb, verb_pos, children in PPS:
+    for idx, sentence, lemma, verb, verb_pos, children_phrasal in PPS:
         if lemma in dative_verbs:
             documented_pp_count += 1
-        args = collect_args(children, "pp")
         PPS_full.append(
             (
                 idx,
@@ -206,10 +217,9 @@ def main(args):
                 lemma,
                 verb,
                 verb_pos,
-                args["theme"],
-                args["recipient"],
-                args["theme_pos"],
-                args["recipient_pos"],
+                children_phrasal[0],
+                children_phrasal[1],
+                children_phrasal[2]
             )
         )
 
