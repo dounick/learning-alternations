@@ -1,2 +1,3 @@
-sentence_idx,sentence,lemma,verb,verb_pos,theme,recipient,theme_pos,recipient_pos
-0,multiple datives: I gave bob a book and Joe sent a bag to me,send,sent,VBD,bag,me,NN,PRP
+global_idx,sentence,verb_lemma,verb,verb_tag,subject,recipient,recipient_tag,recipient_pos,theme,theme_tag,theme_pos,preposition
+1,I gave bob a book and Joe sent a bag to me,send,sent,VBD,joe,me,IN,ADP,a bag,NN,NOUN,to
+3,I submitted homework to the website for now,submit,submitted,VBD,i,the website,IN,ADP,homework,NN,NOUN,to

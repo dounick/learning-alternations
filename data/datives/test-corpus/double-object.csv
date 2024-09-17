@@ -1,4 +1,4 @@
-sentence_idx,sentence,lemma,verb,verb_pos,theme,recipient,theme_pos,recipient_pos
-1,dash: It connects Les Ponts-de-Martel and Montmollin.,connect,connects,VBZ,-,de,NNP,NNP
-2,dash: Carrying out post-selections,carry,Carrying,VBG,-,post,NNS,NNS
-3,unknown names: using NK-93 engines that can operate on LNG,use,using,VBG,engines,nk-93,NNS,CD
+global_idx,sentence,verb_lemma,verb,verb_tag,subject,recipient,recipient_tag,recipient_pos,theme,theme_tag,theme_pos,preposition
+0,I gave bob a book and Joe sent a bag to me,give,gave,VBD,i,bob,NNP,PROPN,a book,NN,NOUN,
+2,"giving him, despite difficulties, a raise",give,giving,VBG,,him,PRP,PRON,a raise,NN,NOUN,
+4,I appoint you president,appoint,appoint,VBP,i,you,PRP,PRON,president,NN,NOUN,

@@ -3,6 +3,7 @@ import config
 import csv
 import pathlib
 import re
+import utils
 import spacy
 from spacy.tokenizer import Tokenizer
 from spacy.util import compile_infix_regex
@@ -14,9 +15,11 @@ from tqdm import tqdm
 
 
 def main(args):
+    corpus_path = args.corpus_path
+    dative_path = args.dative_path
+    batch_size = args.batch_size
 
-    sentence = args.sentence
-    sentence = [sentence]
+    pathlib.Path(dative_path).mkdir(parents=True, exist_ok=True)
    
    # from stack, gets around hyphen being treated as a separate token 
     def custom_tokenizer(nlp):
@@ -38,13 +41,14 @@ def main(args):
     # print(gpu)
     nlp = spacy.load("en_core_web_trf")
     nlp.tokenizer = custom_tokenizer(nlp)
+    corpus = utils.read_file(corpus_path)
 
     dative_verbs = sorted(
         list(
             set(config.alternating_verbs + config.do_only_verbs + config.pp_only_verbs)
         )
     )
-    
+
     def get_children_flatten(token, depth=0, dep=False, return_tokens=False):
         """recursively get children of a given token using spacy."""
         children = []
@@ -86,7 +90,7 @@ def main(args):
         if alternant == "do":
             dobj_count = 0
             dative_count = 0
-            for (dep, _, _) in children_phrasal:
+            for (dep, _, _, _) in children_phrasal:
                 if dep == "dobj":
                     dobj_count += 1
                 if dep == "dative":
@@ -106,7 +110,7 @@ def main(args):
                         consts["subject"] = phrasal_verb_child
                 return consts
             elif dobj_count == 2:
-                for (dep, tag, phrasal_verb_child) in children_phrasal:
+                for (dep, tag, pos, phrasal_verb_child) in children_phrasal:
                     if dep == "dobj":
                         if consts["recipient"] == "":
                             consts["recipient"] = phrasal_verb_child
@@ -123,7 +127,7 @@ def main(args):
                 print("Error: DO construction not found")
                 return None
         elif alternant == "pp":
-            for (dep, tag, phrasal_verb_child) in children_phrasal:
+            for (dep, tag, pos, phrasal_verb_child) in children_phrasal:
                 if dep == "dobj":
                     consts["theme"] = phrasal_verb_child
                     consts["theme_tag"] = tag
@@ -176,22 +180,22 @@ def main(args):
                                         dep_child, tag_child, pos_child, phrasal_verb_child = verb_child.dep_, verb_child.tag_, verb_child.pos_, get_phrasal_children(verb_child)
                                         children_phrasal.append((dep_child, tag_child, pos_child, phrasal_verb_child))
                                     consts = retrieve_const(children_phrasal, "pp")
-                                    new_row = {
-                                        "global_idx": global_idx,
-                                        "sentence": doc.text,
-                                        "verb_lemma": entity.lemma_,
-                                        "verb": entity.text,
-                                        "verb_tag": entity.tag_,
-                                        "subject": consts["subject"],
-                                        "recipient": consts["recipient"],
-                                        "recipient_tag": consts["recipient_tag"],
-                                        "recipient_pos" : consts["recipient_pos"],
-                                        "theme": consts["theme"],
-                                        "theme_tag": consts["theme_tag"],
-                                        "theme_pos": consts["theme_pos"],
-                                        "preposition": consts["preposition"]
-                                    }
-                                    pps = pps.append(new_row, ignore_index=True)
+                                    new_row = [
+                                        global_idx,
+                                        doc.text,
+                                        entity.lemma_,
+                                        entity.text,
+                                        entity.tag_,
+                                        consts["subject"],
+                                        consts["recipient"],
+                                        consts["recipient_tag"],
+                                        consts["recipient_pos"],
+                                        consts["theme"],
+                                        consts["theme_tag"],
+                                        consts["theme_pos"],
+                                        consts["preposition"]
+                                    ]
+                                    pps = pd.concat([pps, pd.DataFrame([new_row], columns=pps.columns)], ignore_index=True)
                                     global_idx += 1
                                     is_pp = True
                                     
@@ -211,77 +215,43 @@ def main(args):
                                     dep_child, tag_child, pos_child, phrasal_verb_child = verb_child.dep_, verb_child.tag_, verb_child.pos_, get_phrasal_children(verb_child)
                                     children_phrasal.append((dep_child, tag_child, pos_child, phrasal_verb_child))
                                 consts = retrieve_const(children_phrasal, "do")
-                                new_row = {
-                                    "global_idx": global_idx,
-                                    "sentence": doc.text,
-                                    "verb_lemma": entity.lemma_,
-                                    "verb": entity.text,
-                                    "verb_tag": entity.tag_,
-                                    "subject": consts["subject"],
-                                    "recipient": consts["recipient"],
-                                    "recipient_tag": consts["recipient_tag"],
-                                    "theme": consts["theme"],
-                                    "theme_tag": consts["theme_tag"],
-                                    "preposition": consts["preposition"]
-                                }
-                                dos = dos.append(new_row, ignore_index=True)
+                                new_row = [
+                                    global_idx,
+                                    doc.text,
+                                    entity.lemma_,
+                                    entity.text,
+                                    entity.tag_,
+                                    consts["subject"],
+                                    consts["recipient"],
+                                    consts["recipient_tag"],
+                                    consts["recipient_pos"],
+                                    consts["theme"],
+                                    consts["theme_tag"],
+                                    consts["theme_pos"],
+                                    consts["preposition"]
+                                ]
+                                dos = pd.concat([dos, pd.DataFrame([new_row], columns=dos.columns)], ignore_index=True)
                                 global_idx += 1
         return dos, pps, global_idx
 
-    DOS, PPS = [], []
+    DOS, PPS = pd.DataFrame(), pd.DataFrame()
     global_idx = 0
-    for batch in get_batch(sentence, batch_size=1):
-        dos, pps, global_idx = get_datives_phrasal(batch, 1, nlp, global_idx)
-        DOS.extend(dos)
-        PPS.extend(pps)
-
-    documented_do_count = 0
-    documented_pp_count = 0
-
-    DOS_full = []
-    for idx, sentence, lemma, verb, verb_pos, children_phrasal in DOS:
-        if lemma in dative_verbs:
-            documented_do_count += 1
-        DOS_full.append(
-            (
-                idx,
-                sentence,
-                lemma,
-                verb,
-                verb_pos,
-                children_phrasal
-            )
-        )
-
-    PPS_full = []
-    for idx, sentence, lemma, verb, verb_pos, children_phrasal in PPS:
-        if lemma in dative_verbs:
-            documented_pp_count += 1
-        PPS_full.append(
-            (
-                idx,
-                sentence,
-                lemma,
-                verb,
-                verb_pos,
-                children_phrasal
-            )
-        )
+    for batch in get_batch(corpus, batch_size=batch_size):
+        dos, pps, global_idx = get_datives_phrasal(batch, batch_size, nlp, global_idx)
+        DOS = pd.concat([DOS, dos], ignore_index=True)
+        PPS = pd.concat([PPS, pps], ignore_index=True)
 
     print(
-        f"Detected DOs: {len(DOS)}\nDetected PPs: {len(PPS)}\n\nLevin DOs: {documented_do_count}\nLevin PPs: {documented_pp_count}"
+        f"Detected DOs: {len(DOS)}\nDetected PPs: {len(PPS)}\n"
     )
-    print("Double Object Constructions:")
-    for row in DOS_full:
-        print(row)
-
-    print("Prepositional Constructions:")
-    for row in PPS_full:
-        print(row)
+    DOS.to_csv(f"{dative_path}/double-object.csv", index=False)
+    PPS.to_csv(f"{dative_path}/prepositional.csv", index=False)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--sentence", type=str, help="Path to the corpus file.")
+    parser.add_argument("--corpus_path", type=str, help="Path to the corpus file.")
+    parser.add_argument("--dative_path", type=str, help="Path to the dative output.")
+    parser.add_argument("--batch_size", type=int, default=8192, help="Batch size.")
     args = parser.parse_args()
     main(args)
