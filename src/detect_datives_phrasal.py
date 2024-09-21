@@ -1,4 +1,5 @@
 import argparse
+import os
 import config
 import csv
 import pathlib
@@ -19,8 +20,7 @@ def main(args):
     dative_path = args.dative_path
     batch_size = args.batch_size
 
-    pathlib.Path(dative_path).mkdir(parents=True, exist_ok=True)
-   
+    pathlib.Path(dative_path).mkdir(parents=True, exist_ok=True) 
    # from stack, gets around hyphen being treated as a separate token 
     def custom_tokenizer(nlp):
         inf = list(nlp.Defaults.infixes)               # Default infixes
@@ -109,14 +109,14 @@ def main(args):
                     elif dep == "nsubj":
                         consts["subject"] = phrasal_verb_child
                 return consts
-            elif dobj_count == 2:
+            elif dobj_count >= 2:
                 for (dep, tag, pos, phrasal_verb_child) in children_phrasal:
                     if dep == "dobj":
                         if consts["recipient"] == "":
                             consts["recipient"] = phrasal_verb_child
                             consts["recipient_tag"] = tag
                             consts["recipient_pos"] = pos
-                        else:
+                        elif consts["theme"] == "":
                             consts["theme"] = phrasal_verb_child
                             consts["theme_tag"] = tag
                             consts["theme_pos"] = pos
@@ -124,7 +124,7 @@ def main(args):
                         consts["subject"] = phrasal_verb_child
                 return consts
             else:
-                print("Error: DO construction not found")
+                print(children_phrasal)
                 return None
         elif alternant == "pp":
             for (dep, tag, pos, phrasal_verb_child) in children_phrasal:
@@ -146,17 +146,23 @@ def main(args):
     def get_datives_phrasal(texts, batch_size, processor, global_idx=0):
         dos = pd.DataFrame(columns=["global_idx", "sentence", "verb_lemma", "verb", "verb_tag", "subject", "recipient", "recipient_tag", "recipient_pos", "theme", "theme_tag", "theme_pos", "preposition"])
         pps = dos
+        non_datives = pd.DataFrame(columns=["sentence"])
         for doc in tqdm(processor.pipe(texts, disable=["ner"], batch_size=batch_size)):
+            is_dative = False
             for entity in doc:
                 if entity.pos_ == "VERB":
-                    children = get_children_flatten(entity, 0, dep=True)
+                    all_children = get_children_flatten(entity, 0, dep=True)
+                    children = []
+                    for child in all_children:
+                        if not(child[4] < entity.i and child[2] != 'nsubj'):
+                            children.append(child)
                     if len(children) > 0:
                         tokens, dep, pos_string, depth, index = list(zip(*children))
 
                         # additional boolean in case of a sentence containing multiple datives
                         is_pp = False
                         if "to" in tokens or "for" in tokens:
-                            # Possibly PP
+                            # Possibly to-PP
                             dep_depth = [
                                 f"{d}_{str(depth[i])}" for i, d in enumerate(dep)
                             ]
@@ -174,7 +180,7 @@ def main(args):
                                 and "prep_0" in dep_depth
                                 and "pobj_1" in dep_depth
                             ):
-                                if ("to_dative" in tok_dep or "to_prep" in tok_dep) or ("for_dative" in tok_dep or "for_prep" in tok_dep):
+                                if ("to_dative" in tok_dep or "to_prep" in tok_dep) or ("for_dative" in tok_dep):
                                     children_phrasal = []
                                     for verb_child in entity.children:
                                         dep_child, tag_child, pos_child, phrasal_verb_child = verb_child.dep_, verb_child.tag_, verb_child.pos_, get_phrasal_children(verb_child)
@@ -198,6 +204,7 @@ def main(args):
                                     pps = pd.concat([pps, pd.DataFrame([new_row], columns=pps.columns)], ignore_index=True)
                                     global_idx += 1
                                     is_pp = True
+                                    is_dative = True
                                     
                         if(not is_pp):
                             # Possibly DO
@@ -231,22 +238,19 @@ def main(args):
                                     consts["preposition"]
                                 ]
                                 dos = pd.concat([dos, pd.DataFrame([new_row], columns=dos.columns)], ignore_index=True)
+                                is_dative = True
                                 global_idx += 1
-        return dos, pps, global_idx
+                
+            if not is_dative:
+                non_datives = pd.concat([non_datives, pd.DataFrame([doc.text], columns=non_datives.columns)], ignore_index=True)
+        return dos, pps, non_datives, global_idx
 
-    DOS, PPS = pd.DataFrame(), pd.DataFrame()
     global_idx = 0
     for batch in get_batch(corpus, batch_size=batch_size):
-        dos, pps, global_idx = get_datives_phrasal(batch, batch_size, nlp, global_idx)
-        DOS = pd.concat([DOS, dos], ignore_index=True)
-        PPS = pd.concat([PPS, pps], ignore_index=True)
-
-    print(
-        f"Detected DOs: {len(DOS)}\nDetected PPs: {len(PPS)}\n"
-    )
-    DOS.to_csv(f"{dative_path}/double-object.csv", index=False)
-    PPS.to_csv(f"{dative_path}/prepositional.csv", index=False)
-
+        dos, pps, non_datives, global_idx = get_datives_phrasal(batch, batch_size, nlp, global_idx)
+        dos.to_csv(f"{dative_path}/double-object.csv", index=False, mode='a', header=not os.path.exists(f"{dative_path}/double-object.csv"))
+        pps.to_csv(f"{dative_path}/prepositional.csv", index=False, mode='a', header=not os.path.exists(f"{dative_path}/prepositional.csv"))
+        non_datives.to_csv(f"{dative_path}/non-datives.csv", index=False, mode = 'a', header=not os.path.exists(f"{dative_path}/non-datives.csv"))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

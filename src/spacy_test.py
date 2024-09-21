@@ -20,8 +20,32 @@ def custom_tokenizer(nlp):
                                 token_match=nlp.tokenizer.token_match,
                                 rules=nlp.Defaults.tokenizer_exceptions)
 
+def get_children_flatten(token, depth=0, dep=False, return_tokens=False):
+    """recursively get children of a given token using spacy."""
+    children = []
+    for child in token.children:
+        if dep:
+            if return_tokens:
+                children.append(
+                    (
+                        child.text.lower(),
+                        child.dep_,
+                        child.tag_,
+                        depth,
+                        child.i,
+                        child,
+                    )
+                )
+            else:
+                children.append(
+                    (child.text.lower(), child.dep_, child.tag_, depth, child.i)
+                )
+        else:
+            children.append(child.text.lower())
+        children.extend(get_children_flatten(child, depth + 1, dep, return_tokens))
+    return children
+
 nlp.tokenizer = custom_tokenizer(nlp)
-doc = nlp("I appoint you president")
-for token in doc:
-    spacy.explain(token.dep_)
-displacy.serve(doc, style="dep", auto_select_port = True)
+doc = nlp("I know this is difficult for you, Mr. Neelix, but try to bring for me everything that happened.")
+print(doc.text)
+
