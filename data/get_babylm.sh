@@ -11,8 +11,11 @@ rm $DIR/babylm_data.zip
 mv $DIR/babylm_data/* $DIR
 rm -r $DIR/babylm_data
 
-# concatenate all files within each dir babylm_100M, babylm_dev, babylm_test
+#process gutenberg books separately for more natural linebreaks
+python src/gutenberg_tokenize.py --source $DIR/babylm_100M/gutenberg.train --target $DIR/babylm_100M/gutenberg_sentences.train
+rm $DIR/babylm_100M/gutenberg.train
 
+# concatenate all files within each dir babylm_100M, babylm_dev, babylm_test
 cat $DIR/babylm_100M/* > $DIR/train_100M.txt
 cat $DIR/babylm_dev/* > $DIR/dev.txt
 cat $DIR/babylm_test/* > $DIR/test.txt
