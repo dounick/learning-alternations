@@ -1,9 +1,6 @@
 import argparse
 import os
-import config
-import csv
 import pathlib
-import re
 import utils
 import spacy
 from spacy.tokenizer import Tokenizer
@@ -37,17 +34,11 @@ def main(args):
                                     rules=nlp.Defaults.tokenizer_exceptions)
 
     # spacy setup (from my experience gpu is slower)
-    # gpu = spacy.prefer_gpu()
-    # print(gpu)
+    gpu = spacy.prefer_gpu()
+    print(gpu)
     nlp = spacy.load("en_core_web_trf")
     nlp.tokenizer = custom_tokenizer(nlp)
     corpus = utils.read_file(corpus_path)
-
-    dative_verbs = sorted(
-        list(
-            set(config.alternating_verbs + config.do_only_verbs + config.pp_only_verbs)
-        )
-    )
 
     def get_children_flatten(token, depth=0, dep=False, return_tokens=False):
         """recursively get children of a given token using spacy."""
@@ -78,7 +69,8 @@ def main(args):
     def get_phrasal_children(child):
         text = child.text.lower()
         if child.children:
-            for grandchild in child.children:
+            sorted_children = sorted(child.children, key=lambda x: x.i, reverse=True)
+            for grandchild in sorted_children:
                 if grandchild.i < child.i:
                     text = get_phrasal_children(grandchild) + " " + text
                 else:

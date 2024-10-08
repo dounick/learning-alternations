@@ -1,0 +1,17 @@
+CUDA_VISIBLE_DEVICES=3 python src/training/run_clm.py \
+    --config_name src/training/config.json \
+    --tokenizer_name src/training/tokenizer/ \
+    --train_file data/corpora/babylm/train.txt \
+    --validation_file data/corpora/babylm/test.txt \
+    --per_device_train_batch_size 32 \
+    --per_device_eval_batch_size 32 \
+    --num_train_epochs 20 \
+    --warmup_steps 32000 \
+    --learning_rate 1e-3 \
+    --do_train \
+    --do_eval \
+    --evaluation_strategy epoch \
+    --save_steps 5000 \
+    --output_dir models/babylm-baseline \
+    --push_to_hub \
+    --hub_model_id qing-yao/babylm-baseline 

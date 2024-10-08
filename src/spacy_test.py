@@ -45,7 +45,22 @@ def get_children_flatten(token, depth=0, dep=False, return_tokens=False):
         children.extend(get_children_flatten(child, depth + 1, dep, return_tokens))
     return children
 
+def get_phrasal_children(child):
+    text = child.text.lower()
+    if child.children:
+        sorted_children = sorted(child.children, key=lambda x: x.i, reverse=True)
+        for grandchild in sorted_children:
+            if grandchild.i < child.i:
+                text = get_phrasal_children(grandchild) + " " + text
+            else:
+                text = text + " " + get_phrasal_children(grandchild)
+    return text
+
 nlp.tokenizer = custom_tokenizer(nlp)
-doc = nlp("I know this is difficult for you, Mr. Neelix, but try to bring for me everything that happened.")
-print(doc.text)
+doc = nlp("we'll give those to the little baby .")
+for token in doc:
+    if token.pos_ == "VERB":
+        for child in token.children:
+            print(get_phrasal_children(child))
+displacy.serve(doc, style="dep")
 

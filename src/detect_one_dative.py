@@ -1,5 +1,4 @@
 import argparse
-import config
 import csv
 import pathlib
 import re
@@ -39,12 +38,6 @@ def main(args):
     nlp = spacy.load("en_core_web_trf")
     nlp.tokenizer = custom_tokenizer(nlp)
 
-    dative_verbs = sorted(
-        list(
-            set(config.alternating_verbs + config.do_only_verbs + config.pp_only_verbs)
-        )
-    )
-    
     def get_children_flatten(token, depth=0, dep=False, return_tokens=False):
         """recursively get children of a given token using spacy."""
         children = []
@@ -237,48 +230,6 @@ def main(args):
 
     documented_do_count = 0
     documented_pp_count = 0
-
-    DOS_full = []
-    for idx, sentence, lemma, verb, verb_pos, children_phrasal in DOS:
-        if lemma in dative_verbs:
-            documented_do_count += 1
-        DOS_full.append(
-            (
-                idx,
-                sentence,
-                lemma,
-                verb,
-                verb_pos,
-                children_phrasal
-            )
-        )
-
-    PPS_full = []
-    for idx, sentence, lemma, verb, verb_pos, children_phrasal in PPS:
-        if lemma in dative_verbs:
-            documented_pp_count += 1
-        PPS_full.append(
-            (
-                idx,
-                sentence,
-                lemma,
-                verb,
-                verb_pos,
-                children_phrasal
-            )
-        )
-
-    print(
-        f"Detected DOs: {len(DOS)}\nDetected PPs: {len(PPS)}\n\nLevin DOs: {documented_do_count}\nLevin PPs: {documented_pp_count}"
-    )
-    print("Double Object Constructions:")
-    for row in DOS_full:
-        print(row)
-
-    print("Prepositional Constructions:")
-    for row in PPS_full:
-        print(row)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
