@@ -33,16 +33,35 @@ def main(args):
                                     token_match=nlp.tokenizer.token_match,
                                     rules=nlp.Defaults.tokenizer_exceptions)
 
-    # spacy setup (from my experience gpu is slower)
+    # spacy setup (gpu is actually faster lol)
     gpu = spacy.prefer_gpu()
     print(gpu)
     nlp = spacy.load("en_core_web_trf")
     nlp.tokenizer = custom_tokenizer(nlp)
     corpus = utils.read_file(corpus_path)
 
-    def get_children_flatten(token, depth=0, dep=False, return_tokens=False):
+    def get_children_flatten(token, depth=0, dep=False, return_tokens=False, include_self = False):
         """recursively get children of a given token using spacy."""
         children = []
+        if include_self:
+            if dep:
+                if return_tokens:
+                    children.append(
+                        (
+                            token.text.lower(),
+                            token.dep_,
+                            token.tag_,
+                            depth,
+                            token.i,
+                            token,
+                        )
+                    )
+                else:
+                    children.append(
+                        (token.text.lower(), token.dep_, token.tag_, depth, token.i)
+                    )
+            else:
+                children.append(token.text.lower())
         for child in token.children:
             if dep:
                 if return_tokens:
@@ -67,14 +86,16 @@ def main(args):
 
     # for a particular token, return its dependent children in a phrasal form
     def get_phrasal_children(child):
-        text = child.text.lower()
-        if child.children:
-            sorted_children = sorted(child.children, key=lambda x: x.i, reverse=True)
-            for grandchild in sorted_children:
-                if grandchild.i < child.i:
-                    text = get_phrasal_children(grandchild) + " " + text
-                else:
-                    text = text + " " + get_phrasal_children(grandchild)
+        children_flatten = sorted(get_children_flatten(child, dep=True, include_self=True), key=lambda x: x[4])
+        text = " ".join([x[0] for x in children_flatten])
+        # text = child.text.lower()
+        # if child.children:
+        #     sorted_children = sorted(child.children, key=lambda x: x.i, reverse=True)
+        #     for grandchild in sorted_children:
+        #         if grandchild.i < child.i:
+        #             text = get_phrasal_children(grandchild) + " " + text
+        #         else:
+        #             text = text + " " + get_phrasal_children(grandchild)
         return text
 
     def retrieve_const(children_phrasal, alternant):
@@ -178,25 +199,26 @@ def main(args):
                                         dep_child, tag_child, pos_child, phrasal_verb_child = verb_child.dep_, verb_child.tag_, verb_child.pos_, get_phrasal_children(verb_child)
                                         children_phrasal.append((dep_child, tag_child, pos_child, phrasal_verb_child))
                                     consts = retrieve_const(children_phrasal, "pp")
-                                    new_row = [
-                                        global_idx,
-                                        doc.text,
-                                        entity.lemma_,
-                                        entity.text,
-                                        entity.tag_,
-                                        consts["subject"],
-                                        consts["recipient"],
-                                        consts["recipient_tag"],
-                                        consts["recipient_pos"],
-                                        consts["theme"],
-                                        consts["theme_tag"],
-                                        consts["theme_pos"],
-                                        consts["preposition"]
-                                    ]
-                                    pps = pd.concat([pps, pd.DataFrame([new_row], columns=pps.columns)], ignore_index=True)
-                                    global_idx += 1
-                                    is_pp = True
-                                    is_dative = True
+                                    if consts["recipient"] != "" and consts["theme"] != "" and consts["preposition"] != "":
+                                        new_row = [
+                                            global_idx,
+                                            doc.text,
+                                            entity.lemma_,
+                                            entity.text,
+                                            entity.tag_,
+                                            consts["subject"],
+                                            consts["recipient"],
+                                            consts["recipient_tag"],
+                                            consts["recipient_pos"],
+                                            consts["theme"],
+                                            consts["theme_tag"],
+                                            consts["theme_pos"],
+                                            consts["preposition"]
+                                        ]
+                                        pps = pd.concat([pps, pd.DataFrame([new_row], columns=pps.columns)], ignore_index=True)
+                                        global_idx += 1
+                                        is_pp = True
+                                        is_dative = True
                                     
                         if(not is_pp):
                             # Possibly DO
@@ -214,24 +236,25 @@ def main(args):
                                     dep_child, tag_child, pos_child, phrasal_verb_child = verb_child.dep_, verb_child.tag_, verb_child.pos_, get_phrasal_children(verb_child)
                                     children_phrasal.append((dep_child, tag_child, pos_child, phrasal_verb_child))
                                 consts = retrieve_const(children_phrasal, "do")
-                                new_row = [
-                                    global_idx,
-                                    doc.text,
-                                    entity.lemma_,
-                                    entity.text,
-                                    entity.tag_,
-                                    consts["subject"],
-                                    consts["recipient"],
-                                    consts["recipient_tag"],
-                                    consts["recipient_pos"],
-                                    consts["theme"],
-                                    consts["theme_tag"],
-                                    consts["theme_pos"],
-                                    consts["preposition"]
-                                ]
-                                dos = pd.concat([dos, pd.DataFrame([new_row], columns=dos.columns)], ignore_index=True)
-                                is_dative = True
-                                global_idx += 1
+                                if consts["recipient"] != "" and consts["theme"] != "":
+                                    new_row = [
+                                        global_idx,
+                                        doc.text,
+                                        entity.lemma_,
+                                        entity.text,
+                                        entity.tag_,
+                                        consts["subject"],
+                                        consts["recipient"],
+                                        consts["recipient_tag"],
+                                        consts["recipient_pos"],
+                                        consts["theme"],
+                                        consts["theme_tag"],
+                                        consts["theme_pos"],
+                                        consts["preposition"]
+                                    ]
+                                    dos = pd.concat([dos, pd.DataFrame([new_row], columns=dos.columns)], ignore_index=True)
+                                    is_dative = True
+                                    global_idx += 1
                 
             if not is_dative:
                 non_datives = pd.concat([non_datives, pd.DataFrame([doc.text], columns=non_datives.columns)], ignore_index=True)

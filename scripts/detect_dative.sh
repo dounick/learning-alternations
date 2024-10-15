@@ -1,4 +1,4 @@
-python src/detect_datives_phrasal.py \
+CUDA_VISIBLE_DEVICES=3 python src/detect_datives_phrasal.py \
     --corpus_path data/corpora/babylm/train.txt \
     --dative_path data/datives/babylm \
     --batch_size 8192

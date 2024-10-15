@@ -20,9 +20,28 @@ def custom_tokenizer(nlp):
                                 token_match=nlp.tokenizer.token_match,
                                 rules=nlp.Defaults.tokenizer_exceptions)
 
-def get_children_flatten(token, depth=0, dep=False, return_tokens=False):
+def get_children_flatten(token, depth=0, dep=False, return_tokens=False, include_self = False):
     """recursively get children of a given token using spacy."""
     children = []
+    if include_self:
+        if dep:
+            if return_tokens:
+                children.append(
+                    (
+                        token.text.lower(),
+                        token.dep_,
+                        token.tag_,
+                        depth,
+                        token.i,
+                        token,
+                    )
+                )
+            else:
+                children.append(
+                    (token.text.lower(), token.dep_, token.tag_, depth, token.i)
+                )
+        else:
+            children.append(token.text.lower())
     for child in token.children:
         if dep:
             if return_tokens:
@@ -46,21 +65,14 @@ def get_children_flatten(token, depth=0, dep=False, return_tokens=False):
     return children
 
 def get_phrasal_children(child):
-    text = child.text.lower()
-    if child.children:
-        sorted_children = sorted(child.children, key=lambda x: x.i, reverse=True)
-        for grandchild in sorted_children:
-            if grandchild.i < child.i:
-                text = get_phrasal_children(grandchild) + " " + text
-            else:
-                text = text + " " + get_phrasal_children(grandchild)
+    children_flatten = sorted(get_children_flatten(child, dep=True, include_self=True), key=lambda x: x[4])
+    text = " ".join([x[0] for x in children_flatten])
     return text
 
 nlp.tokenizer = custom_tokenizer(nlp)
-doc = nlp("we'll give those to the little baby .")
+doc = nlp("i need my finger little pal ")
 for token in doc:
-    if token.pos_ == "VERB":
+    if token.text == "need":
         for child in token.children:
             print(get_phrasal_children(child))
-displacy.serve(doc, style="dep")
 
