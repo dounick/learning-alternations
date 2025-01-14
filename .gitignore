@@ -1,4 +1,8 @@
 data/corpora/babylm/
+*.sents 
+*.csv 
+*.txt
+*.png 
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
