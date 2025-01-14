@@ -1,7 +1,0 @@
-sentence_idx,sentence,lemma,verb,verb_pos,theme,recipient,theme_pos,recipient_pos
-0,she gave me the ball.,give,gave,VBD,ball,me,NN,PRP
-1,she gave mom the ball.,give,gave,VBD,ball,mom,NN,NN
-2,she sent grandma the big book.,send,sent,VBD,book,grandma,NN,NN
-4,she is tossing the dog the big ball.,toss,tossing,VBG,ball,dog,NN,NN
-5,she had given me the ball.,give,given,VBN,ball,me,NN,PRP
-6,she has given mommy the ball.,give,given,VBN,ball,mommy,NN,NN

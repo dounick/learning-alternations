@@ -2,6 +2,7 @@
 import argparse
 from nltk.tokenize import sent_tokenize
 from tqdm import tqdm
+import re
 
 
 def main(args):
@@ -17,7 +18,9 @@ def main(args):
 
     with open(target, "w") as f:
         for sent in sentences:
-            f.write(sent + "\n")
+            sent = re.sub(r'(?<=[.,!?])(?=[^\s])', r' ', sent)
+            sent = sent.replace("–", "-").replace("—", "-")
+            f.write(sent.replace("_", "") + "\n")
 
 
 if __name__ == "__main__":
