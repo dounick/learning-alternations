@@ -1,7 +1,9 @@
-*.csv
 *.txt
 *.sents
 *.zip
 *.out
 *.png
-./wandb
+data/corpora/
+data/datives/
+data/training_sets/
+wandb
