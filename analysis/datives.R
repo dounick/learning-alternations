@@ -1,14 +1,27 @@
 library(tidyverse)
+library(lme4)
 
 # Read and process data
 d = read_csv("all_data.csv") %>%
   select(global_idx, recipient_pronoun, theme_pronoun,
-         `default_ratio`:`balanced_ratio`,
-         length_difference) %>%
-  pivot_longer(cols = `default_ratio`:`balanced_ratio`, names_to=c("variable")) %>%
+         `babylm-default_ratio`:`long_first_nodatives_ratio`,
+         length_difference,
+         verb_lemma,
+         -random_ratio,
+         -long_first_ratio,
+         -short_first_ratio) %>%
+  pivot_longer(cols = `babylm-default_ratio`:`long_first_nodatives_ratio`, names_to=c("variable")) %>%
   mutate(recipient_pronoun = ifelse(recipient_pronoun > 0, "pronoun", "NP")) %>%
   mutate(variable = gsub("_ratio", "", variable))
 
+chosen.levels = c("babylm-default",
+                  "babylm-balanced",
+                  "loose-balanced",
+                  "loose-default",        
+                  "ditransitives_removed",
+                  "datives_removed",
+                  "short_first_nodatives",
+                  "long_first_nodatives")
 slopes = d %>%
   group_by(variable, recipient_pronoun) %>%
   summarise(slope = cor(value, length_difference)) %>%
@@ -60,6 +73,18 @@ ggplot(plot2_data, aes(x = length_difference, y = m)) +
   geom_text(data=slopes2, 
             aes(x=x, y=y, label=val), size=3)
 
+###############
+# compare to default
 
+d$variable = factor(d$variable, levels = chosen.levels)
+l = lm(data=d,
+   value ~ length_difference * variable)
+summary(l)
+
+# compare to LONG
+d$variable = factor(d$variable, levels = rev(chosen.levels))
+l = lm(data=d,
+       value ~ length_difference * variable)
+summary(l)
 
 
