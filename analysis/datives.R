@@ -3,12 +3,9 @@ library(tidyverse)
 # Read and process data
 d = read_csv("all_data.csv") %>%
   select(global_idx, recipient_pronoun, theme_pronoun,
-         `babylm-default_ratio`:`long_first_nodatives_ratio`,
-         length_difference,
-         -random_ratio,
-         -long_first_ratio,
-         -short_first_ratio) %>%
-  pivot_longer(cols = `babylm-default_ratio`:`long_first_nodatives_ratio`, names_to=c("variable")) %>%
+         `default_ratio`:`balanced_ratio`,
+         length_difference) %>%
+  pivot_longer(cols = `default_ratio`:`balanced_ratio`, names_to=c("variable")) %>%
   mutate(recipient_pronoun = ifelse(recipient_pronoun > 0, "pronoun", "NP")) %>%
   mutate(variable = gsub("_ratio", "", variable))
 
@@ -37,7 +34,7 @@ ggplot(plot2_data, aes(x = length_difference, y = m, colour = recipient_pronoun)
   geom_point() +
   theme_bw(base_size = 14) +
   facet_wrap(~factor(variable, levels = unique(d$variable)), nrow = 1) +
-  ylab("DO Preference") +
+  ylab("P(DO alternant) - P(PO alternant)") +
   geom_smooth(method = "lm") +
   scale_colour_manual(values = c("black", "darkorange")) +
   geom_text(data=slopes, 
@@ -56,7 +53,8 @@ ggplot(plot2_data, aes(x = length_difference, y = m)) +
   geom_point() +
   theme_bw(base_size = 14) +
   facet_wrap(~factor(variable, levels = unique(d$variable)), nrow = 1) +
-  ylab("DO Preference") +
+  ylab("P(DO alternant) - P(PO alternant)") +
+  xlab("log(len(recipient)) - log(len(theme))") + 
   geom_smooth(method = "lm") +
   scale_colour_manual(values = c("black", "darkorange")) +
   geom_text(data=slopes2, 
