@@ -46,8 +46,8 @@ plot2_data$variable = factor(plot2_data$variable,
 ggplot(plot2_data, aes(x = length_difference, y = m, colour = recipient_pronoun)) +
   geom_point() +
   theme_bw(base_size = 14) +
-  facet_wrap(~factor(variable, levels = chosen.levels), nrow = 1) +
-  ylab("DO Preference") +
+  facet_wrap(~factor(variable, levels = unique(d$variable)), nrow = 1) +
+  ylab("P(DO alternant) - P(PO alternant)") +
   geom_smooth(method = "lm") +
   scale_colour_manual(values = c("black", "darkorange")) +
   geom_text(data=slopes, 
@@ -65,8 +65,9 @@ plot2_data$variable = factor(plot2_data$variable,
 ggplot(plot2_data, aes(x = length_difference, y = m)) +
   geom_point() +
   theme_bw(base_size = 14) +
-  facet_wrap(~factor(variable, levels = chosen.levels), nrow = 1) +
-  ylab("DO Preference") +
+  facet_wrap(~factor(variable, levels = unique(d$variable)), nrow = 1) +
+  ylab("P(DO alternant) - P(PO alternant)") +
+  xlab("log(len(recipient)) - log(len(theme))") + 
   geom_smooth(method = "lm") +
   scale_colour_manual(values = c("black", "darkorange")) +
   geom_text(data=slopes2, 
