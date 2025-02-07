@@ -95,5 +95,5 @@ plot2_data %>%
       x = "Log Difference in Recipient and Theme Lengths"
     )
 
-
+ggsave("paper/length-pref.pdf", dpi=300, height=4.34, width=15.20, device=cairo_pdf)
 
