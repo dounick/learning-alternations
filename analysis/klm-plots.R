@@ -1,8 +1,10 @@
 library(tidyverse)
 library(ggtext)
 
-d = read_csv("analysis/all_data.csv") %>%
-  select(global_idx, recipient_pronoun, theme_pronoun,
+rawdata <- read_csv("analysis/all_data.csv")
+
+d =  rawdata %>%
+  select(global_idx, recipient_pronoun, theme_pronoun, recipient_anim,
          loose_default_ratio:ditransitives_removed_ratio,
          length_difference,
          verb_lemma) %>%
@@ -14,7 +16,7 @@ d = read_csv("analysis/all_data.csv") %>%
     condition = factor(
       condition, 
       levels = c("loose_default", "loose_balanced", "default", "balanced", "datives_removed", "ditransitives_removed", "short_first_nodatives", "random_first_nodatives", "long_first_nodatives"),
-      labels = c("Unablated (Strict)", "Balanced (Loose)", "Unablated (Strict)", 
+      labels = c("Unablated (Loose)", "Balanced (Loose)", "Unablated (Strict)", 
                  "Balanced (Strict)", "No Datives", "No Ditransitives", "Short-first (No Datives)", "Random-first (No Datives)", "Long-first (No Datives)")
     )
   )
@@ -96,4 +98,89 @@ plot2_data %>%
     )
 
 ggsave("paper/length-pref.pdf", dpi=300, height=4.34, width=15.20, device=cairo_pdf)
+
+
+animacy_data <- d %>%
+  filter(length_difference == 0) %>% 
+  # distinct(global_idx, recipient_anim) %>% count(recipient_anim)
+  filter(recipient_anim %in% c("a", "i"))
+
+t_tests <- animacy_data %>%
+  group_by(condition) %>%
+  nest() %>%
+  mutate(
+    t_test = map_dbl(data, function(x) {
+      a = x %>% filter(recipient_anim == "a") %>% pull(score)
+      i = x %>% filter(recipient_anim == "i") %>% pull(score)
+      
+      test = t.test(a, i) %>% 
+        broom::tidy() %>%
+        pull(p.value)
+      
+      return(test)
+    })
+  ) %>%
+  select(-data)
+
+anim_pvals <- t_tests %>%
+  mutate(
+    p_val = case_when(
+      t_test <= 0.001 ~ format.pval(t_test, eps = 0.001, scientific=FALSE),
+      t_test <= 0.01 ~ format.pval(t_test, eps = 0.01, scientific=FALSE),
+      t_test <= 0.05 ~ format.pval(t_test, eps = 0.05, scientific=FALSE),
+      TRUE ~ as.character(round(t_test, 3))
+    ),
+    p_val = case_when(
+      !str_starts(p_val, "<") ~ paste("=", p_val),
+      TRUE ~ p_val
+    ),
+    p_val = paste("<i>p</i>", p_val)
+  )
+
+a <- animacy_data %>%
+  filter(condition == "Balanced (Loose)", recipient_anim == "a") %>%
+  pull(score)
+
+i <- animacy_data %>%
+  filter(condition == "Balanced (Loose)", recipient_anim == "i") %>%
+  pull(score)
+
+t.test(a, i) %>% broom::tidy()
+
+animacy_data %>%
+  group_by(recipient_anim, condition) %>%
+  summarize(
+    ste = 1.96 * plotrix::std.error(score),
+    score = mean(score)
+  ) %>%
+  ungroup() %>%
+  mutate(
+    recipient_anim = case_when(
+      recipient_anim == "a" ~ "Animate",
+      TRUE ~ "Inanimate"
+    )
+  ) %>%
+  filter(!str_detect(condition, "-first")) %>%
+  filter(!condition %in% c("Unablated (Loose)", "Balanced (Loose)")) %>%
+  ggplot(aes(recipient_anim, score)) +
+  geom_point(size = 2) +
+  geom_linerange(aes(ymin = score-ste, ymax = score+ste)) +
+  geom_richtext(x = 1.5, y = -0.05, data = anim_pvals %>% filter(!str_detect(condition, "-first")) %>%
+                  filter(!condition %in% c("Unablated (Loose)", "Balanced (Loose)")), 
+                aes(label=p_val), family="CMU Serif", fill="cornsilk") +
+  scale_y_continuous(limits = c(-0.82, -0.0)) +
+  facet_wrap(~condition, nrow=1) +
+  theme_bw(base_size = 16, base_family = "Times") +
+  theme(
+    panel.grid = element_blank(),
+    axis.text = element_text(color = "black")
+  ) +
+  labs(
+    x = "Recipient Animacy",
+    y = "DO Preference"
+  )
+  # distinct(global_idx, recipient_anim) %>% 
+  # count(recipient_anim)
+
+ggsave("paper/animacy.pdf", height=3, width=9.5, dpi=300, device=cairo_pdf)
 
