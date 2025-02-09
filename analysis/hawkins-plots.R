@@ -5,7 +5,8 @@ hawkins_raw <- read_csv("analysis/hawkins/results.csv")
 
 results <- hawkins_raw %>%
   filter(verb_count >= 1) %>%
-  select(i,verb_id, classification, behavior=BehavDOpreference, gpt2_ratio, default_ratio, balanced_ratio) %>% 
+  select(i,verb_id, classification, behavior=BehavDOpreference, gpt2_ratio, loose_default_small_ratio, loose_balanced_small_ratio) %>% 
+  rename(default_ratio = loose_default_small_ratio, balanced_ratio = loose_balanced_small_ratio) %>%
   mutate(
     behavior = behavior/100,
     behavior = behavior - min(behavior)/(max(behavior) - min(behavior)),
@@ -42,14 +43,14 @@ results %>%
   pivot_longer(gpt2_ratio:balanced_ratio, names_to = "condition", values_to = "do_pref") %>%
   mutate(condition = str_remove(condition, "_ratio")) %>%
   # mutate(condition = factor(condition, levels = c("default", "balanced"), labels = c("Strict (unablated)", "Strict (balanced)"))) %>%
-  mutate(condition = factor(condition, levels = c("default", "balanced", "gpt2"), labels = c("Unablated BabyLM", "Balanced (Strict)", "GPT-2 Small"))) %>%
-  filter(condition %in% c("Unablated BabyLM", "GPT-2 Small")) %>%
+  mutate(condition = factor(condition, levels = c("default", "balanced", "gpt2"), labels = c("Unablated", "Balanced (Strict)", "GPT-2 Small"))) %>%
+  filter(condition %in% c("Unablated", "GPT-2 Small")) %>%
   mutate(classification = case_when(classification == "alternating" ~ "Alternating", TRUE ~ "Non-alternating")) %>%
   ggplot(aes(behavior, do_pref, color = classification)) +
   geom_point(size = 2, alpha = 0.6) +
   geom_smooth(aes(group=NA), method = "lm", color = "black") +
   geom_richtext(
-    data=rho %>% filter(condition %in% c("Unablated BabyLM", "GPT-2 Small")), 
+    data=rho %>% filter(condition %in% c("Unablated", "GPT-2 Small")), 
     aes(x=x, y=y, label=r), size=4, family="Times", color = "black"
   ) +
   facet_wrap(~ condition, scales = "free_y") +
