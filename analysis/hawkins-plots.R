@@ -1,5 +1,6 @@
 library(tidyverse)
 library(ggtext)
+# library(extrafont)
 
 hawkins_raw <- read_csv("analysis/hawkins/results.csv")
 
@@ -36,7 +37,7 @@ rho <- results %>%
     x = 0.6, y = case_when(condition == "gpt2" ~ -5, TRUE ~ -1),
     r = paste("<i>r</i> =", round(r, 2))
   ) %>%
-  mutate(condition = factor(condition, levels = c("default", "balanced", "gpt2"), labels = c("Unablated BabyLM", "Balanced (Strict)", "GPT-2 Small")))
+  mutate(condition = factor(condition, levels = c("default", "balanced", "gpt2"), labels = c("Unablated", "Balanced (Strict)", "GPT-2 Small")))
   
 
 results %>%
@@ -53,9 +54,10 @@ results %>%
     data=rho %>% filter(condition %in% c("Unablated", "GPT-2 Small")), 
     aes(x=x, y=y, label=r), size=4, family="Times", color = "black"
   ) +
+  # scale_y_continuous(breaks = scales::pretty_breaks(6)) +
   facet_wrap(~ condition, scales = "free_y") +
   scale_color_manual(values = c("#018571", "#a6611a")) +
-  theme_bw(base_size = 16, base_family="Times") +
+  theme_bw(base_size = 18, base_family="Times") +
   theme(
     legend.position = "top",
     panel.grid = element_blank()
