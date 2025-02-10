@@ -5,10 +5,10 @@ rawdata <- read_csv("analysis/all_data.csv")
 
 d =  rawdata %>%
   select(global_idx, recipient_pronoun, theme_pronoun, recipient_anim,
-         datives_removed_ratio:long_first_small_ratio,
+         datives_removed_ratio:long_first_noditransitive_ratio,
          length_difference,
          verb_lemma) %>%
-  pivot_longer(cols=datives_removed_ratio:long_first_small_ratio, names_to = "condition", values_to = "score") %>% 
+  pivot_longer(cols=datives_removed_ratio:long_first_noditransitive_ratio, names_to = "condition", values_to = "score") %>% 
   # pivot_longer(cols = `babylm-default_ratio`:`long_first_nodatives_ratio`, names_to=c("variable")) %>%
   mutate(recipient_pronoun = ifelse(recipient_pronoun > 0, "pronoun", "NP")) %>%
   # mutate(condition = gsub("small_ratio", "", condition)) %>%
@@ -16,11 +16,13 @@ d =  rawdata %>%
   mutate(
     condition = factor(
       condition, 
-      levels = c("loose_default", "loose_balanced", "default", "balanced", "datives_removed", "ditransitives_removed", "short_first", "random_first", "long_first"),
+      levels = c("loose_default", "loose_balanced", "default", "balanced", "datives_removed", "ditransitives_removed", "short_first", "random_first", "long_first", "short_first_noditransitive", "random_first_noditransitive", "long_first_noditransitive"),
       labels = c("Unablated (Loose)", "Balanced (Loose)", "Unablated (Strict)", 
-                 "Balanced (Strict)", "No Datives", "No Ditransitives", "Short-first (No Datives)", "Random-first (No Datives)", "Long-first (No Datives)")
+                 "Balanced (Strict)", "No Datives", "No Ditransitives", "Short-first (No Datives)", "Random-first (No Datives)", "Long-first (No Datives)",
+                 "Short-first\n(No Ditransitives)", "Random-first\n(No Ditransitives)", "Long-first\n(No Ditransitives)")
     )
   )
+
 
 d %>% count(condition)
 
@@ -76,6 +78,7 @@ plot2_data = d %>%
 plot2_data %>%
   # filter(condition %in% c("Strict (unablated)", "Strict (balanced)", "Short-first (No Datives)", "Long-first (No Datives)")) %>%
   filter(!condition %in% c("Unablated (Strict)", "Balanced (Strict)")) %>%
+  filter(!str_detect(condition, "\\(No Datives\\)")) %>% 
   ggplot(aes(x = length_difference, y = m)) +
     geom_point(size = 2, alpha = 0.5, color = "black") +
     facet_wrap(~condition, nrow = 1) +
@@ -84,7 +87,8 @@ plot2_data %>%
     geom_smooth(method = "lm") +
     # scale_colour_manual(values = c("black", "darkorange")) +
     geom_richtext(
-      data=slopes2 %>% filter(!condition %in% c("Unablated (Strict)", "Balanced (Strict)")), 
+      data=slopes2 %>% filter(!condition %in% c("Unablated (Strict)", "Balanced (Strict)")) %>%
+        filter(!str_detect(condition, "\\(No Datives\\)")), 
       aes(x=x, y=y, label=val), size=4, family="CMU Serif", color = "black",
       fill="cornsilk"
     ) +
@@ -171,8 +175,8 @@ animacy_data %>%
                   filter(!condition %in% c("Unablated (Strict)", "Balanced (Strict)")), 
                 aes(label=p_val), family="CMU Serif", fill="cornsilk") +
   scale_y_continuous(limits = c(-0.82, -0.0)) +
-  facet_wrap(~condition, nrow=1) +
-  theme_bw(base_size = 16, base_family = "Times") +
+  facet_wrap(~condition, nrow=2) +
+  theme_bw(base_size = 18, base_family = "Times") +
   theme(
     panel.grid = element_blank(),
     axis.text = element_text(color = "black")
@@ -184,5 +188,6 @@ animacy_data %>%
   # distinct(global_idx, recipient_anim) %>% 
   # count(recipient_anim)
 
-ggsave("paper/animacy.pdf", height=3, width=9.5, dpi=300, device=cairo_pdf)
+# ggsave("paper/animacy.pdf", height=3, width=9.5, dpi=300, device=cairo_pdf)
+ggsave("paper/animacy.pdf", height=6.42, width=7.85, dpi=300, device=cairo_pdf)
 
