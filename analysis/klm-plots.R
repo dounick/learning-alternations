@@ -4,13 +4,13 @@ library(ggtext)
 rawdata <- read_csv("analysis/all_data.csv")
 
 d =  rawdata %>%
-  select(global_idx, recipient_pronoun, theme_pronoun, recipient_anim,
+  select(global_idx, recipient_pos, recipient_anim,
          datives_removed_ratio:long_first_noditransitive_ratio,
          length_difference,
          verb_lemma) %>%
   pivot_longer(cols=datives_removed_ratio:long_first_noditransitive_ratio, names_to = "condition", values_to = "score") %>% 
   # pivot_longer(cols = `babylm-default_ratio`:`long_first_nodatives_ratio`, names_to=c("variable")) %>%
-  mutate(recipient_pronoun = ifelse(recipient_pronoun > 0, "pronoun", "NP")) %>%
+  mutate(recipient_pos = ifelse(recipient_pos == "PRON", "pronoun", "NP")) %>%
   # mutate(condition = gsub("small_ratio", "", condition)) %>%
   mutate(condition = str_replace(condition, "(_small)?_ratio", "")) %>%
   mutate(
