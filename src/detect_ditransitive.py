@@ -11,6 +11,8 @@ from collections import defaultdict, Counter
 from minicons.utils import get_batch
 from tqdm import tqdm
 
+import csv
+
 
 def main(args):
     corpus_path = args.corpus_path
@@ -99,12 +101,14 @@ def main(args):
         #             text = text + " " + get_phrasal_children(grandchild)
         return text, i
     
-    def get_datives_phrasal(texts, batch_size, processor, global_idx=0):
-        dos = pd.DataFrame(columns=["global_idx", "sentence", "verb_lemma", "verb", "token_count", "type"])
-        pps = dos
-        non_datives = pd.DataFrame(columns=["sentence", "token_count"])
+    def get_datives_phrasal(texts, batch_size, processor):
+        output_non_datives = os.path.join('data/datives/ditransitive', f'non-ditransitives.csv')
+        if not os.path.exists(output_non_datives):
+            with open(output_non_datives, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(['sentence', 'token_count'])
         for doc in tqdm(processor.pipe(texts, disable=["ner"], batch_size=batch_size)):
-            is_dative = False
+            is_ditransitive = False
             for entity in doc:
                 if entity.pos_ == "VERB":
                     all_children = get_children_flatten(entity, 0, dep=True)
@@ -114,15 +118,10 @@ def main(args):
                             children.append(child)
                     if len(children) > 0:
                         tokens, dep, pos_string, depth, index = list(zip(*children))
-
-                        is_pp = False
-                        if 'prep' in dep or 'dative' in dep:
-                            dep_depth = [
+                        dep_depth = [
                                 f"{d}_{str(depth[i])}" for i, d in enumerate(dep)
                             ]
-                            tok_dep = [
-                                f"{tokens[i]}_{dep[i]}" for i in range(len(tokens))
-                            ]
+                        if 'prep' in dep or 'dative' in dep:
                             if (
                                 "dobj_0" in dep_depth
                                 and "dative_0" in dep_depth
@@ -131,38 +130,32 @@ def main(args):
                                 "dobj_0" in dep_depth
                                 and "prep_0" in dep_depth
                                 and "pobj_1" in dep_depth
-                            ):
-                                new_row = [global_idx, doc.text, entity.lemma_, entity.text, len(doc), "pp"]
-                                pps = pd.concat([pps, pd.DataFrame([new_row], columns=pps.columns)], ignore_index=True)
-                                global_idx += 1
-                                is_pp = True
-                                is_dative = True
-                                    
-                        if(not is_pp):
-                            # Possibly DO
-                            dep_depth = [
-                                f"{d}_{str(depth[i])}" for i, d in enumerate(dep)
-                            ]
-                            tokens_dep = [
-                                f"{tokens[i]}_{dep[i]}" for i in range(len(tokens))
-                            ]
-                            if (
-                                "dobj_0" in dep_depth and "dative_0" in dep_depth
-                            ) or Counter(dep_depth)["dobj_0"] >= 2:
-                                    new_row = [global_idx, doc.text, entity.lemma_, entity.text, len(doc), "do"]
-                                    dos = pd.concat([dos, pd.DataFrame([new_row], columns=dos.columns)], ignore_index=True)
-                                    is_dative = True
-                                    global_idx += 1
-            if not is_dative:
-                non_datives = pd.concat([non_datives, pd.DataFrame([[doc.text, len(doc)]], columns=non_datives.columns)], ignore_index=True)
-        return dos, pps, non_datives, global_idx
+                            ): 
+                                is_ditransitive = True
+                                break   
+                        if (
+                            "dobj_0" in dep_depth and "dative_0" in dep_depth
+                        ) or Counter(dep_depth)["dobj_0"] >= 2: 
+                            is_ditransitive = True
+                            break
+                        if (
+                            "dobj_0" in dep_depth
+                            and "prt_0" in dep_depth 
+                            and "prep_0" in dep_depth
+                            and "pobj_1" in dep_depth
+                        ) or (
+                            "dobj_0" in dep_depth
+                            and ("prt_0" in dep_depth or "advmod_0" in dep_depth) 
+                            and "prep_1" in dep_depth
+                            and "pobj_2" in dep_depth
+                        ):
+                            is_ditransitive = True
+                            break   
 
-    global_idx = 0
-    for batch in get_batch(corpus, batch_size=batch_size):
-        dos, pps, non_datives, global_idx = get_datives_phrasal(batch, batch_size, nlp, global_idx)
-        dos.to_csv(f"{dative_path}/do-ditransitive.csv", index=False, mode='a', header=not os.path.exists(f"{dative_path}/do-ditransitive.csv"))
-        pps.to_csv(f"{dative_path}/po-ditransitive.csv", index=False, mode='a', header=not os.path.exists(f"{dative_path}/po-ditransitive.csv"))
-        non_datives.to_csv(f"{dative_path}/non-ditransitive.csv", index=False, mode = 'a', header=not os.path.exists(f"{dative_path}/non-ditransitive.csv"))
+            if not is_ditransitive:
+                with open(output_non_datives, 'a', newline='', encoding='utf-8') as f:
+                    writer = csv.writer(f)
+                    writer.writerow([doc.text, len(doc)])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

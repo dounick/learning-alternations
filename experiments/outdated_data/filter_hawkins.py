@@ -4,9 +4,10 @@ import numpy as np
 verb_count = np.zeros(25*len(verbs)) 
 
 import pandas as pd
-dos = pd.read_csv('data/datives/babylm/double-object-filtered.csv')
-pos = pd.read_csv('data/datives/babylm/prepositional-filtered.csv')
-hawkins = pd.read_csv('experiments/generated_pairs_with_results.csv')
+pos = pd.read_csv('data/datives/babylm/loose_alternant_of_pos.csv')
+dos = pd.read_csv('data/datives/babylm/loose_alternant_of_dos.csv')
+dos = dos.head(len(pos))
+hawkins = pd.read_csv('experiments/outdated_data/generated_pairs_with_results.csv')
 
 hawkins['DOsentence'] = hawkins['DOsentence'].str.replace('alloted', 'alotted')
 hawkins['PDsentence'] = hawkins['PDsentence'].str.replace('alloted', 'alotted') 
@@ -17,7 +18,7 @@ for i in range(len(verbs)):
     verb_count[i*25:25*i+24] = num_verbs
 
 hawkins['verb_count'] = verb_count
-hawkins.to_csv('experiments/generated_pairs_with_results.csv', index = False)
+hawkins.to_csv('experiments/outdated_data/generated_pairs_with_results.csv', index = False)
 
 
 
