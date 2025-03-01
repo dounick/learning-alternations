@@ -8,27 +8,24 @@ filter(rawdata, is.na(recipient_pos_spacy)) %>%
 
 d =  rawdata %>%
   select(global_idx, recipient_pos, recipient_anim, theme_pos, theme_anim,
-         loose_default_ratio:long_first_headfinal_ratio,
+         loose_default_ratio63:long_first_headfinal_ratio63,
          length_difference,
          verb_lemma) %>%
-  pivot_longer(cols=loose_default_ratio:long_first_ratio, names_to = "condition", values_to = "score") %>% 
-  # pivot_longer(cols = `babylm-default_ratio`:`long_first_nodatives_ratio`, names_to=c("variable")) %>%
+  pivot_longer(cols=loose_default_ratio63:long_first_headfinal_ratio63, names_to = "condition", values_to = "score") %>% 
   mutate(recipient_pos = ifelse(recipient_pos == "PRON" | is.na(recipient_pos), "pronoun", "NP"),
          theme_pos = ifelse(theme_pos == "PRON" | is.na(theme_pos), "pronoun", "NP")) %>%
-  # mutate(condition = gsub("small_ratio", "", condition)) %>%
-  mutate(condition = str_replace(condition, "(_small)?_ratio", "")) %>%
+  mutate(condition = str_replace(condition, "(_small)?_ratio63", "")) %>%
   mutate(
     condition = factor(
       condition, 
       levels = c("loose_default", "loose_balanced", "datives_removed", "ditransitives_removed", "counterfactual", "short_first", "random_first", "long_first", "long_first_headfinal"),
-      labels = c("Unablated (Loose)", "Balanced (Loose)", "No Datives", "No Ditransitives", "Counterfactual",
+      labels = c("Unablated (Loose)", "Balanced (Loose)", "No Datives", "No Ditransitives", "Swapped Datives",
                  "Short-first\n(No Ditransitives)", "Random-first\n(No Ditransitives)", "Long-first\n(No Ditransitives)", "Long-first\n(Head Final)")
     )
   )
 
 
 d %>% count(condition)
-
 
 # chosen.levels = c("babylm-default",
 #                   "babylm-balanced",
@@ -50,7 +47,7 @@ d %>% count(condition)
 slopes2 = d %>%
   group_by(condition) %>%
   summarise(slope = cor(score, length_difference)) %>%
-  mutate(x = -1.85, y=1.35,
+  mutate(x = -1.85, y=1.15,
          val = paste("<i>r</i> =",as.character(format(round(slope, 2), nsmall=2))))
 
 # plot2_data = d %>%
@@ -80,34 +77,32 @@ plot2_data = d %>%
 
 
 plot2_data %>%
-  # filter(condition %in% c("Strict (unablated)", "Strict (balanced)", "Short-first (No Datives)", "Long-first (No Datives)")) %>%
-  # filter(!condition %in% c("Unablated (Strict)", "Balanced (Strict)")) %>%
-  filter(!str_detect(condition, "\\(No Datives\\)")) %>% 
   ggplot(aes(x = length_difference, y = m)) +
-    geom_point(size = 2, alpha = 0.5, color = "black") +
-    facet_wrap(~condition, nrow = 1) +
-    ylab("P(DO alternant) - P(PO alternant)") +
-    xlab("log(len(recipient)) - log(len(theme))") + 
-    geom_smooth(method = "lm") +
-    # scale_colour_manual(values = c("black", "darkorange")) +
-    geom_richtext(
-      data=slopes2 %>% filter(!condition %in% c("Unablated (Strict)", "Balanced (Strict)")) %>%
-        filter(!str_detect(condition, "\\(No Datives\\)")), 
-      aes(x=x, y=y, label=val), size=4, family="CMU Serif", color = "black",
-      fill="cornsilk"
-    ) +
+  geom_point(size = 2, alpha = 0.5, color = "black") +
+  facet_wrap(~condition, nrow = 2, ncol = 5) +  # Changed to 2 rows, max 5 columns
+  ylab("P(DO alternant) - P(PO alternant)") +
+  xlab("log(len(recipient)) - log(len(theme))") + 
+  geom_smooth(method = "lm") +
+  geom_richtext(
+    data = slopes2 %>% filter(!condition %in% c("Unablated (Strict)", "Balanced (Strict)")), 
+    aes(x = x, y = y, label = val), 
+    size = 4, 
+    family = "CMU Serif", 
+    color = "black",
+    fill = "cornsilk"
+  ) +
   theme_bw(base_size = 16, base_family = "Times") +
   theme(
     panel.grid = element_blank(),
     strip.text = element_text(size = 15),
     axis.text = element_text(color = "black")
-  )+
-    labs(
-      y = "DO Preference",
-      x = "Log Difference in Recipient and Theme Lengths"
-    )
+  ) +
+  labs(
+    y = "DO Preference",
+    x = "Log Difference in Recipient and Theme Lengths"
+  )
 
-ggsave("paper/length-pref.pdf", dpi=300, height=3.80, width=14.10, device=cairo_pdf)
+ggsave("paper/length-pref63.pdf", dpi = 300, height = 6, width = 12, device = cairo_pdf)
 
 #################
 library(lme4)
