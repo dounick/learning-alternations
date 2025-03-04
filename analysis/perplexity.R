@@ -122,7 +122,14 @@ model_data_long <- data.frame(
   Perplexity = c(perplexity1, perplexity2, perplexity3),
   LengthCorrelation = c(length_correlation1, length_correlation2, length_correlation3),
   Seed = rep(c("Seed 1", "Seed 2", "Seed 3"), each = length(models))
-)
+) %>%
+  mutate(
+    color = case_when(
+      Model %in% c("default", "short-first") ~ "#1b9e77",
+      Model %in% c("balanced", "no-datives", "no-ditransitives") ~ "#d95f02",
+      Model %in% c("swapped-datives", "random-first", "long-first", "long-first-headfinal") ~ "#7570b3"
+    )
+  )
 
 seed_pairs <- rbind(
   data.frame(
@@ -146,7 +153,14 @@ seed_pairs <- rbind(
     xend = perplexity1, 
     yend = length_correlation1
   )
-)
+) %>%
+  mutate(
+    color = case_when(
+      Model %in% c("default", "short-first") ~ "#1b9e77",
+      Model %in% c("balanced", "no-datives", "no-ditransitives") ~ "#d95f02",
+      Model %in% c("swapped-datives", "random-first", "long-first", "long-first-headfinal") ~ "#7570b3"
+    )
+  )
 
 library(ggplot2)
 library(ggrepel)
@@ -157,6 +171,13 @@ model_avg_positions <- model_data_long %>%
   summarize(
     AvgPerplexity = mean(Perplexity),
     AvgLengthCorrelation = mean(LengthCorrelation)
+  ) %>%
+  mutate(
+    color = case_when(
+      Model %in% c("default", "short-first") ~ "#1b9e77",
+      Model %in% c("balanced", "no-datives", "no-ditransitives") ~ "#d95f02",
+      Model %in% c("swapped-datives", "random-first", "long-first", "long-first-headfinal") ~ "#7570b3"
+    )
   )
 
 model_colors <- c(
@@ -173,32 +194,40 @@ model_colors <- c(
 
 hull_data <- model_data_long %>%
   group_by(Model) %>%
-  slice(chull(Perplexity, LengthCorrelation))
+  slice(chull(Perplexity, LengthCorrelation)) %>%
+  mutate(
+    color = case_when(
+      Model %in% c("default", "short-first") ~ "#1b9e77",
+      Model %in% c("balanced", "no-datives", "no-ditransitives") ~ "#d95f02",
+      Model %in% c("swapped-datives", "random-first", "long-first", "long-first-headfinal") ~ "#7570b3"
+    )
+  )
 
 set.seed(5)
 
-ggplot() +
+ggplot(hull_data) +
   geom_polygon(data = hull_data, 
-               aes(x = Perplexity, y = LengthCorrelation, fill = Model),
+               aes(x = Perplexity, y = LengthCorrelation, fill = color, group = Model),
                alpha = 0.1) +
   geom_segment(data = seed_pairs, 
-               aes(x = x, y = y, xend = xend, yend = yend, color = Model),
+               aes(x = x, y = y, xend = xend, yend = yend, color = color),
                alpha = 0.4, linetype = "dotted") +
   geom_point(data = model_data_long, 
-             aes(x = Perplexity, y = LengthCorrelation, color = Model),
+             aes(x = Perplexity, y = LengthCorrelation, color = color),
              size = 3, alpha = 0.8) +
   geom_text_repel(data = model_avg_positions,
-                  aes(x = AvgPerplexity, y = AvgLengthCorrelation, label = Model, color = Model),
+                  aes(x = AvgPerplexity, y = AvgLengthCorrelation, label = Model, color = color),
                   box.padding = 1,
                   point.padding = 0.5,
                   segment.curvature = -0.1,
                   segment.ncp = 3,
                   segment.angle = 20,
                   force = 3,
-                  size = 4, show.legend = FALSE, family="Inconsolata", face = "bold") +
+                  size = 4, show.legend = FALSE, family="Inconsolata",fontface = "bold") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "darkgrey") +
-  scale_color_manual(values = model_colors) +
-  scale_fill_manual(values = model_colors) +
+  # scale_color_manual(values = model_colors) +
+  # scale_fill_manual(values = model_colors) +
+  scale_color_identity(aesthetics = c("color", "fill")) +
   scale_x_continuous(limits = c(48, 500)) +
   theme_classic(base_family = "Palatino", base_size = 16) +
   labs(
