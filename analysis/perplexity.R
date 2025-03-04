@@ -64,6 +64,8 @@ hull_data <- model_data_long %>%
   group_by(Model) %>%
   slice(chull(Perplexity, LengthCorrelation))
 
+set.seed(5)
+
 ggplot() +
   geom_polygon(data = hull_data, 
                aes(x = Perplexity, y = LengthCorrelation, fill = Model),
@@ -78,22 +80,28 @@ ggplot() +
                   aes(x = AvgPerplexity, y = AvgLengthCorrelation, label = Model, color = Model),
                   box.padding = 0.7,
                   point.padding = 0.5,
+                  segment.curvature = -0.1,
+                  segment.ncp = 3,
+                  segment.angle = 20,
                   force = 3,
-                  size = 3.5, show.legend = FALSE) +
-  geom_hline(yintercept = 0, linetype = "dotted", color = "gray50") +
+                  size = 4, show.legend = FALSE, family="Inconsolata") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "darkgrey") +
   scale_color_manual(values = model_colors) +
   scale_fill_manual(values = model_colors) +
-  theme_minimal() +
+  scale_x_continuous(limits = c(50, 90)) +
+  theme_classic(base_family = "Palatino", base_size = 16) +
   labs(
     x = "Perplexity",
     y = "Length Correlation"
     ) +
   theme(
-    panel.grid.minor = element_blank(),
+    # panel.grid.minor = element_blank(),
     plot.title = element_text(hjust = 0.5),
     plot.caption = element_text(hjust = 0),
-    legend.position = "right",
+    legend.position = "Right",
     legend.box = "vertical"
   )
 
-ggsave("paper/perplexity.pdf", dpi = 300, height = 3.5, width = 7, device = cairo_pdf)
+# ggsave("paper/perplexity.pdf", dpi = 300, height = 3.5, width = 7, device = cairo_pdf)
+# kanishka recommended size for post processing:
+ggsave("paper/perplexity.pdf", dpi=300, height = 5.29, width=8.12, device=cairo_pdf)
